@@ -41,7 +41,15 @@ static std::wstring toWide(const char* s) {
  
 static HWND g_best = NULL;
 static long long g_bestArea = 0;
- 
+
+static bool belongsToCurrentProcess(HWND h) {
+    if (!h || !IsWindow(h)) return false;
+
+    DWORD pid = 0;
+    GetWindowThreadProcessId(h, &pid);
+    return pid == GetCurrentProcessId();
+}
+
 static BOOL CALLBACK enumOwn(HWND h, LPARAM) {
     DWORD pid = 0; GetWindowThreadProcessId(h, &pid);
     if (pid != GetCurrentProcessId() || !IsWindowVisible(h) || GetWindow(h, GW_OWNER)) return TRUE;
@@ -52,10 +60,12 @@ static BOOL CALLBACK enumOwn(HWND h, LPARAM) {
 }
  
 static HWND getWindow() {
-    HWND h = GetActiveWindow();
-    if (h) return GetAncestor(h, GA_ROOT);
-    h = GetForegroundWindow();
-    if (h) { DWORD pid = 0; GetWindowThreadProcessId(h, &pid); if (pid == GetCurrentProcessId()) return h; }
+    HWND h = GetForegroundWindow();
+    if (belongsToCurrentProcess(h)) return GetAncestor(h, GA_ROOT);
+
+    h = GetActiveWindow();
+    if (belongsToCurrentProcess(h)) return GetAncestor(h, GA_ROOT);
+
     g_best = NULL; g_bestArea = 0;
     EnumWindows(enumOwn, 0);
     return g_best;
@@ -126,15 +136,22 @@ static void refreshFrameNow(HWND h) {
  
 static bool applyTransparentImpl(int r, int g, int b) {
     HWND h = getWindow();
-    if (!h) { LOG("set_transparent: no se encontro la ventana"); return false; }
- 
+    if (!h) { LOG("set_transparent: no se encontro una ventana del proceso actual"); return false; }
+
     LONG_PTR ex = GetWindowLongPtr(h, GWL_EXSTYLE);
-    SetWindowLongPtr(h, GWL_EXSTYLE, ex | WS_EX_LAYERED);
- 
+    if (!(ex & WS_EX_LAYERED) && !SetWindowLongPtr(h, GWL_EXSTYLE, ex | WS_EX_LAYERED)) {
+        LOG("set_transparent: no se pudo activar WS_EX_LAYERED err=%lu", GetLastError());
+        return false;
+    }
+
     int mode = resolveMode();
     COLORREF key = RGB(r & 255, g & 255, b & 255);
     BOOL ok = SetLayeredWindowAttributes(h, key, 255, LWA_COLORKEY);
- 
+    if (!ok) {
+        LOG("set_transparent: SetLayeredWindowAttributes fallo err=%lu", GetLastError());
+        return false;
+    }
+
     if (mode >= 2) refreshFrame(h);
     LOG("set_transparent hwnd=%p color=(%d,%d,%d) modo=%d ok=%d err=%lu",
         (void*)h, r, g, b, mode, (int)ok, ok ? 0UL : GetLastError());
@@ -184,9 +201,12 @@ DEFINE_PRIME1(set_alpha);
  
 static bool removeImpl() {
     HWND h = getWindow();
-    if (!h) { LOG("remove_transparent: no se encontro la ventana"); return false; }
+    if (!h) { LOG("remove_transparent: no se encontro una ventana del proceso actual"); return false; }
     LONG_PTR ex = GetWindowLongPtr(h, GWL_EXSTYLE);
-    SetWindowLongPtr(h, GWL_EXSTYLE, ex & ~WS_EX_LAYERED);
+    if ((ex & WS_EX_LAYERED) && !SetWindowLongPtr(h, GWL_EXSTYLE, ex & ~WS_EX_LAYERED)) {
+        LOG("remove_transparent: no se pudo quitar WS_EX_LAYERED err=%lu", GetLastError());
+        return false;
+    }
     refreshFrame(h);
     LOG("remove_transparent hwnd=%p", (void*)h);
     return true;
