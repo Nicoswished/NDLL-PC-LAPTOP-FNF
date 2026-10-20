@@ -1,6 +1,8 @@
 // ndll-sportedout-windows.ndll  (hxcpp 4.3.x, Windows x64)
 // - set_transparent(bool,int,int,int) y set_transparent(r,g,b) [3 args]
 // - Protegido contra crashes (SEH) + validación de tipos + log en sportedout_ndll.log
+
+//CODE BY NICOSWISHED
 #define _CRT_SECURE_NO_WARNINGS
 #define IMPLEMENT_API
 #include <hx/CFFIPrime.h>
