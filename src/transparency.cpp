@@ -15,8 +15,6 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "dxgi.lib")
  
-// ------------------------------------------------------------------ log
-// Se escribe en sportedout_ndll.log (carpeta desde la que se ejecuta el juego)
 static void LOG(const char* fmt, ...) {
     FILE* f = fopen("sportedout_ndll.log", "a");
     if (!f) return;
@@ -27,7 +25,6 @@ static void LOG(const char* fmt, ...) {
     fclose(f);
 }
  
-// ---------------------------------------------------------------- utilidades
 static std::string toUtf8(const std::wstring& w) {
     if (w.empty()) return "";
     int n = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), NULL, 0, NULL, NULL);
@@ -42,7 +39,6 @@ static std::wstring toWide(const char* s) {
     return w;
 }
  
-// ------------------------------------------------- ventana principal del juego
 static HWND g_best = NULL;
 static long long g_bestArea = 0;
  
@@ -65,7 +61,6 @@ static HWND getWindow() {
     return g_best;
 }
  
-// ------------------------------------------------------- detección laptop / PC
 struct SysInfo { bool laptop; bool hybrid; int adapters; std::string gpus; };
  
 static SysInfo detect() {
@@ -95,7 +90,6 @@ static SysInfo detect() {
     return si;
 }
  
-// Helpers SIN objetos C++ locales para poder usar __try/__except
 static void detectInto(SysInfo* out) { *out = detect(); }
  
 static bool detectGuarded(SysInfo* out) {
@@ -111,7 +105,6 @@ static int computeAutoMode() {
     return 1;
 }
  
-// 0 = auto, 1 = clásico, 2 = con refresco, 3 = compatibilidad
 static int g_mode = 0;
  
 static int resolveMode() {
@@ -121,19 +114,16 @@ static int resolveMode() {
     return cached;
 }
  
-// Refresco ASÍNCRONO: solo marca la ventana como "sucia". NO envía mensajes síncronos,
-// así no se re-entra al código del juego (Haxe) en mitad de una llamada al ndll.
+
 static void refreshFrame(HWND h) {
     RedrawWindow(h, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
  
-// Solo para cambiar el estilo del marco (icono). No lo usa la transparencia.
 static void refreshFrameNow(HWND h) {
     SetWindowPos(h, NULL, 0, 0, 0, 0,
         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 }
  
-// ------------------------------------------------------------ transparencia
 static bool applyTransparentImpl(int r, int g, int b) {
     HWND h = getWindow();
     if (!h) { LOG("set_transparent: no se encontro la ventana"); return false; }
@@ -161,16 +151,13 @@ static bool applyTransparentGuarded(int r, int g, int b) {
     }
 }
  
-// Versión de 4 argumentos: (bool, r, g, b)
 value set_transparent(bool unused, int r, int g, int b) {
     LOG("set_transparent(4 args) llamado");
     return alloc_bool(applyTransparentGuarded(r, g, b));
 }
 DEFINE_PRIME4(set_transparent);
  
-// Versión de 3 argumentos: (r, g, b).
-// Se genera con la macro oficial de hxcpp (conversión de valores segura) y luego se
-// exporta con el nombre "set_transparent__3" que busca cpp.Lib.load / NdllUtil.
+
 value set_transparent3(int r, int g, int b) {
     LOG("set_transparent(3 args) llamado: %d, %d, %d", r, g, b);
     return alloc_bool(applyTransparentGuarded(r, g, b));
@@ -178,7 +165,6 @@ value set_transparent3(int r, int g, int b) {
 DEFINE_PRIME3(set_transparent3);
 #pragma comment(linker, "/EXPORT:set_transparent__3=set_transparent3__3")
  
-// ------------------------------------------------------------------- opacidad
 static bool applyAlphaImpl(int a) {
     HWND h = getWindow();
     if (!h) return false;
@@ -198,7 +184,6 @@ static bool applyAlphaGuarded(int a) {
 value set_alpha(int a) { return alloc_bool(applyAlphaGuarded(a)); }
 DEFINE_PRIME1(set_alpha);
  
-// ------------------------------------------------------------ quitar transparencia
 static bool removeImpl() {
     HWND h = getWindow();
     if (!h) { LOG("remove_transparent: no se encontro la ventana"); return false; }
@@ -215,7 +200,6 @@ static bool removeGuarded() {
 value remove_transparent() { return alloc_bool(removeGuarded()); }
 DEFINE_PRIME0(remove_transparent);
  
-// Extras para diagnosticar / forzar un modo desde Haxe
 value set_transparent_mode(int mode) { g_mode = (mode < 0 || mode > 3) ? 0 : mode; LOG("modo forzado = %d", g_mode); return alloc_int(g_mode); }
 DEFINE_PRIME1(set_transparent_mode);
  
@@ -229,7 +213,6 @@ value get_system_info() {
 }
 DEFINE_PRIME0(get_system_info);
  
-// ------------------------------------------------------------- barra de tareas
 static void showTaskbars(int cmd) {
     HWND t = FindWindowA("Shell_TrayWnd", NULL);
     if (t) ShowWindow(t, cmd);
@@ -241,7 +224,6 @@ DEFINE_PRIME0(hide_taskbar);
 value show_taskbar() { showTaskbars(SW_SHOW); return alloc_bool(true); }
 DEFINE_PRIME0(show_taskbar);
  
-// ------------------------------------------------------- icono de la ventana
 static void setSysMenu(bool on) {
     HWND h = getWindow(); if (!h) return;
     LONG_PTR st = GetWindowLongPtr(h, GWL_STYLE);
@@ -253,7 +235,6 @@ DEFINE_PRIME0(hide_window_icon);
 value show_window_icon() { setSysMenu(true); return alloc_bool(true); }
 DEFINE_PRIME0(show_window_icon);
  
-// ------------------------------------------------------------ fondo de pantalla
 value get_wallpaper() {
     wchar_t buf[MAX_PATH] = {0};
     SystemParametersInfoW(SPI_GETDESKWALLPAPER, MAX_PATH, buf, 0);
@@ -269,7 +250,6 @@ value change_wallpaper(value path) {
 }
 DEFINE_PRIME1(change_wallpaper);
  
-// ------------------------------------------------------------------------ RAM
 value get_ram() {
     ULONGLONG kb = 0;
     if (GetPhysicallyInstalledSystemMemory(&kb)) return alloc_int((int)(kb / 1024)); // MB
@@ -279,7 +259,6 @@ value get_ram() {
 }
 DEFINE_PRIME0(get_ram);
  
-// ------------------------------------------- ocultar / restaurar otras ventanas
 static std::vector<HWND> g_hidden;
  
 static BOOL CALLBACK enumOthers(HWND h, LPARAM) {
@@ -304,7 +283,6 @@ DEFINE_PRIME1(hide_windows);
 value show_windows(value /*arg*/) { restoreHidden(); return alloc_bool(true); }
 DEFINE_PRIME1(show_windows);
  
-// Si el juego se cierra con normalidad, no deja ventanas ocultas
 BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_DETACH) restoreHidden();
     return TRUE;
