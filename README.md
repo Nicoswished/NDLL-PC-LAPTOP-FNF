@@ -10,9 +10,9 @@
 
 ## 💎 Exclusive Release
 
-**NitroLight Sported Out Team Only — $9.99 USD**
+**NitroLight Sported Out Team Only $9.99$**
 
-This mod is an exclusive release by **NitroLight Sported Out Team**. Access to the mod is priced at **$9.99 USD**.
+This mod is an exclusive release by **NitroLight Sported Out Team**
 
 Redistribution, resale, or reuse of the project without authorization from the creator is not permitted.
 
