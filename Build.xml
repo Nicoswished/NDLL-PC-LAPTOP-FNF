@@ -1,0 +1,19 @@
+<xml>
+  <include name="${HXCPP}/build-tool/BuildCommon.xml"/>
+ 
+  <files id="src">
+    <file name="src/transparency.cpp"/>
+  </files>
+ 
+  <target id="NDLL" output="ndll-sportedout-windows" tool="linker" toolid="${STD_MODULE_LINK}">
+    <ext value=".ndll"/>
+    <outdir name="ndll/Windows64"/>
+    <files id="src"/>
+    <lib name="user32.lib" if="windows"/>
+    <lib name="dxgi.lib" if="windows"/>
+  </target>
+ 
+  <target id="default">
+    <target id="NDLL"/>
+  </target>
+</xml>
