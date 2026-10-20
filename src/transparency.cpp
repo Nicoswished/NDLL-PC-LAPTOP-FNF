@@ -133,9 +133,7 @@ static bool applyTransparentImpl(int r, int g, int b) {
  
     int mode = resolveMode();
     COLORREF key = RGB(r & 255, g & 255, b & 255);
-    BOOL ok;
-    if (mode == 3) ok = SetLayeredWindowAttributes(h, key, 255, LWA_COLORKEY | LWA_ALPHA);
-    else           ok = SetLayeredWindowAttributes(h, key, 0, LWA_COLORKEY);
+    BOOL ok = SetLayeredWindowAttributes(h, key, 255, LWA_COLORKEY);
  
     if (mode >= 2) refreshFrame(h);
     LOG("set_transparent hwnd=%p color=(%d,%d,%d) modo=%d ok=%d err=%lu",
